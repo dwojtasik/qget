@@ -65,11 +65,13 @@ Function arguments:
       If passed all parts bytes and rewrite status will be updated in it. Defaults to None.
   max_connections (int, optional): Maximum amount of asynchronous HTTP connections. Defaults to 50.
   connection_test_sec (int, optional): Maximum time in seconds assigned to test
-      how much asynchronous connections can be achieved to URL. If set to 0 test will be omitted. Defaults to 5.
+      how much asynchronous connections can be achieved to URL.
+      If set to 0 test will be omitted. Defaults to 5.
   chunk_bytes (int, optional): Chunk of data read in iteration from url and save to part file in bytes.
       Will be used also when rewriting parts to output file. Defaults to 2621440.
   max_part_mb (float, optional): Desirable (if possible) max part size in megabytes. Defaults to 5.
-  tmp_dir (str, optional): Temporary directory path. If not set it points to OS tmp directory. Defaults to None.
+  tmp_dir (str, optional): Temporary directory path. If not set it points to OS tmp directory.
+      Defaults to None.
   debug (bool, optional): Debug flag. Defaults to False.
 
 |
@@ -134,11 +136,12 @@ Command line
 
 .. code-block:: bash
 
-  usage: qget [-h] [-o FILEPATH] [-f] [-c MAX_CONNECTIONS] [--test CONNECTION_TEST_SEC] [--bytes CHUNK_BYTES]
-                [--part MAX_PART_MB] [--tmp TMP_DIR] [--debug]
+  usage: qget [-h] [-o FILEPATH] [-f] [-c MAX_CONNECTIONS] [--test CONNECTION_TEST_SEC]
+                [--bytes CHUNK_BYTES] [--part MAX_PART_MB] [--tmp TMP_DIR] [--debug]
                 url
 
-  Downloads resource from given URL in buffered parts using asynchronous HTTP connections with aiohttp session.
+  Downloads resource from given URL in buffered parts using asynchronous HTTP connections
+  with aiohttp session.
 
   positional arguments:
     url                   URL of resource
@@ -151,10 +154,10 @@ Command line
     -c MAX_CONNECTIONS, --connections MAX_CONNECTIONS
                           Maximum amount of asynchronous HTTP connections.
     --test CONNECTION_TEST_SEC
-                          Maximum time in seconds assigned to test how much asynchronous connectionscan be achieved to
-                          URL. Use 0 to skip.
-    --bytes CHUNK_BYTES   Chunk of data read in iteration from url and save to part file in bytes. Will be used also
-                          when rewriting parts to output file.
+                          Maximum time in seconds assigned to test how much asynchronous connectionscan be
+                          achieved to URL. Use 0 to skip.
+    --bytes CHUNK_BYTES   Chunk of data read in iteration from url and save to part file in bytes. Will be
+                          used also when rewriting parts to output file.
     --part MAX_PART_MB    Desirable (if possible) max part size in megabytes.
     --tmp TMP_DIR         Temporary directory path. If not set it points to OS tmp directory.
     --debug               Debug flag.
