@@ -253,16 +253,19 @@ async def _get_resource_bytes(url: str) -> int:
     Raises:
         ValueError: If server disconnects.
     """
-    try:
-        async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession() as session:
+        try:
             response = await session.head(url)
             if response.status == 200 and "Content-Length" in response.headers:
                 return int(response.headers.get("Content-Length"))
-            response = await session.get(url)
-            if response.status == 200:
-                return int(response.headers.get("Content-Length", 0))
-    except aiohttp.ServerDisconnectedError as ex:
-        raise ValueError("Server disconnected") from ex
+            raise ValueError("Content-Length not found for HEAD request")
+        except (aiohttp.ServerDisconnectedError, ValueError):
+            try:
+                response = await session.get(url)
+                if response.status == 200:
+                    return int(response.headers.get("Content-Length", 0))
+            except aiohttp.ServerDisconnectedError as ex:
+                raise ValueError("Server disconnected") from ex
     return 0
 
 

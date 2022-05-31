@@ -90,7 +90,7 @@ To use in code simply import module function:
 
   from qget import qget
 
-  url = "https://proof.ovh.net/files/100Mb.dat"
+  url = "https://speed.hetzner.de/100MB.bin"
   qget(url)
 
 |
@@ -103,7 +103,7 @@ To use in code with own loop and **asyncio**:
   from qget import qget_coro
 
   async def main(loop):
-      url = "https://proof.ovh.net/files/100Mb.dat"
+      url = "https://speed.hetzner.de/100MB.bin"
       download_task = loop.create_task(qget_coro(url))
       await download_task
       # Or just
@@ -131,7 +131,7 @@ Usage for progress hooks (by default hooks are used to display **tqdm** progress
       if progress.rewrite_bytes == progress.total_bytes:
           print()
 
-  url = "https://proof.ovh.net/files/100Mb.dat"
+  url = "https://speed.hetzner.de/100MB.bin"
   progress = ProgressState(
     on_download_progress=print_download_progress,
     on_rewrite_progress=print_rewrite_progress
@@ -175,7 +175,7 @@ Can be used also from python module with same arguments as for binary:
 
 .. code-block:: bash
 
-  python -m qget https://proof.ovh.net/files/100Mb.dat
+  python -m qget https://speed.hetzner.de/100MB.bin
 
 History
 =======
