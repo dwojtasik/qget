@@ -17,6 +17,14 @@ Features
 - support for limiting RAM usage with settings ``chunk_bytes`` and ``max_part_mb``
 - automatic measurement of simultaneous connection limit
 
+Requirements
+============
+
+- Python >= 3.7
+- `aiohttp <https://pypi.org/project/aiohttp/>`_
+- `aiofiles <https://pypi.org/project/aiofiles/>`_
+- `tqdm <https://pypi.org/project/tqdm/>`_
+
 Installation
 ============
 
@@ -130,11 +138,10 @@ Usage for progress hooks (by default hooks are used to display **tqdm** progress
   )
   qget(url, progress_ref=progress)
 
-
 Command line
 ------------
 
-.. code-block:: bash
+.. code-block:: text
 
   usage: qget [-h] [-o FILEPATH] [-f] [-c MAX_CONNECTIONS] [--test CONNECTION_TEST_SEC]
                 [--bytes CHUNK_BYTES] [--part MAX_PART_MB] [--tmp TMP_DIR] [--debug]
