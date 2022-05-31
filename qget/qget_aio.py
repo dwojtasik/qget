@@ -214,11 +214,20 @@ async def _test_connection(session: aiohttp.ClientSession, url: str) -> int:
         return status_code
 
 
-async def _get_max_connections(url: str, pool: int, connection_test_sec: int, logger: logging.Logger = None) -> int:
+async def _get_max_connections(
+    url: str,
+    auth: aiohttp.BasicAuth,
+    verify_ssl: bool,
+    pool: int,
+    connection_test_sec: int,
+    logger: logging.Logger = None,
+) -> int:
     """Measures and returnes maximum amount of asynchronous HTTP connections to URL.
 
     Args:
         url (str): The URL to be requested.
+        auth (aiohttp.BasicAuth): The basic auth for SSL connection.
+        verify_ssl (bool): Flag if SSL certificate validation should be performed.
         pool (int): The maximum connections amount provided by the user.
         connection_test_sec (int): Maximum time in seconds assigned to test
             how much asynchronous connections can be achieved to URL.
@@ -227,8 +236,8 @@ async def _get_max_connections(url: str, pool: int, connection_test_sec: int, lo
     Returns:
         int: Number of asynchronous connections achieved.
     """
-    connector = aiohttp.TCPConnector(limit=pool)
-    async with aiohttp.ClientSession(connector=connector) as session:
+    connector = aiohttp.TCPConnector(limit=pool, verify_ssl=verify_ssl)
+    async with aiohttp.ClientSession(connector=connector, auth=auth) as session:
         tasks = [_test_connection(session, url) for _ in range(pool)]
         done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED, timeout=connection_test_sec)
         for task in pending:
@@ -240,12 +249,14 @@ async def _get_max_connections(url: str, pool: int, connection_test_sec: int, lo
         return len([status for status in statuses if status > 0 and status < 400])
 
 
-async def _get_resource_bytes(url: str) -> int:
+async def _get_resource_bytes(url: str, auth: aiohttp.BasicAuth, verify_ssl: bool) -> int:
     """Returns resource bytes from Content-Length header if possible.
        If HEAD request is not available for give resource URL, GET will be performed.
 
     Args:
         url (str): The resource URL to read size from.
+        auth (aiohttp.BasicAuth): The basic auth for SSL connection.
+        verify_ssl (bool): Flag if SSL certificate validation should be performed.
 
     Returns:
         int: The resource bytes. Returns 0 if none of performed requests returns Content-Length header.
@@ -253,7 +264,8 @@ async def _get_resource_bytes(url: str) -> int:
     Raises:
         ValueError: If server disconnects.
     """
-    async with aiohttp.ClientSession() as session:
+    connector = aiohttp.TCPConnector(verify_ssl=verify_ssl)
+    async with aiohttp.ClientSession(connector=connector, auth=auth) as session:
         try:
             response = await session.head(url)
             if response.status == 200 and "Content-Length" in response.headers:
@@ -370,6 +382,8 @@ async def qget_coro(
     url: str,
     filepath: str = None,
     override: bool = False,
+    auth: str = None,
+    verify_ssl: bool = True,
     progress_ref: ProgressState = None,
     max_connections: int = 50,
     connection_test_sec: int = 5,
@@ -385,6 +399,8 @@ async def qget_coro(
         filepath (str, optional): Output path for downloaded resource.
             If not set it points to current working directory and filename from url. Defaults to None.
         override (bool, optional): Flag if existing output file should be override. Defaults to False.
+        auth (str, optional): String of user:password pair for SSL connection. Defaults to None.
+        verify_ssl (bool, optional): Flag if SSL certificate validation should be performed. Defaults to True.
         progress_ref (ProgressState, optional): Reference to progress state.
             If passed all parts bytes and rewrite status will be updated in it. Defaults to None.
         max_connections (int, optional): Maximum amount of asynchronous HTTP connections. Defaults to 50.
@@ -410,8 +426,16 @@ async def qget_coro(
     _validate_paths(filepath, override, tmp_dir)
     _validate_settings(max_connections, connection_test_sec, chunk_bytes, max_part_mb)
 
+    basic_auth = None
+    if auth is not None:
+        if ":" in auth:
+            user, password = auth.split(":", 1)
+            if len(user) == 0 or len(password) == 0:
+                raise ValueError(f"Parameter auth has to have format of user:password. Actual value: {user}.")
+            basic_auth = aiohttp.BasicAuth(user, password)
+
     logger.debug("Fetching resource size...")
-    resource_bytes = await _get_resource_bytes(url)
+    resource_bytes = await _get_resource_bytes(url, basic_auth, verify_ssl)
     if resource_bytes == 0:
         raise ValueError("Given URL does not support stream transfer or does not have Content-Length header provided.")
     if progress_ref:
@@ -420,7 +444,9 @@ async def qget_coro(
 
     if connection_test_sec > 0:
         logger.debug("Measuring maximum asynchronous connections...")
-        aio_connections = await _get_max_connections(url, max_connections, connection_test_sec, logger)
+        aio_connections = await _get_max_connections(
+            url, basic_auth, verify_ssl, max_connections, connection_test_sec, logger
+        )
         if aio_connections == 0:
             raise ValueError("Cannot send any asynchronous connection to given resource URL.")
         logger.debug("Max connections set to: %d", aio_connections)
@@ -439,8 +465,8 @@ async def qget_coro(
         async with semaphore:
             return await task
 
-    connector = aiohttp.TCPConnector(limit=aio_connections)
-    async with aiohttp.ClientSession(connector=connector) as session:
+    connector = aiohttp.TCPConnector(limit=aio_connections, verify_ssl=verify_ssl)
+    async with aiohttp.ClientSession(connector=connector, auth=basic_auth) as session:
         part_bytes = min(math.ceil(resource_bytes / aio_connections), int(max_part_mb * 1024 * 1024))
         part_count = math.ceil(resource_bytes / part_bytes)
         logger.debug("Set parts as: %d x %s", part_count, _to_human_readable_unit(part_bytes))
@@ -496,6 +522,8 @@ def qget(url: str, **kwargs) -> None:
         filepath (str, optional): Output path for downloaded resource.
             If not set it points to current working directory and filename from url. Defaults to None.
         override (bool, optional): Flag if existing output file should be override. Defaults to False.
+        auth (str, optional): String of user:password pair for SSL connection. Defaults to None.
+        verify_ssl (bool, optional): Flag if SSL certificate validation should be performed. Defaults to True.
         progress_ref (ProgressState, optional): Reference to progress state.
             If passed all parts bytes and rewrite status will be updated in it. Defaults to None.
         max_connections (int, optional): Maximum amount of asynchronous HTTP connections. Defaults to 50.

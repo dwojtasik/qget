@@ -70,6 +70,21 @@ def _get_parser() -> argparse.ArgumentParser:
         help="Forces file override for output.",
     )
     parser.add_argument(
+        "-a",
+        "--auth",
+        type=str,
+        dest="auth",
+        default=default_args["auth"],
+        help="String of user:password pair for SSL connection.",
+    )
+    parser.add_argument(
+        "--no_ssl",
+        action="store_false",
+        dest="verify_ssl",
+        default=default_args["verify_ssl"],
+        help="Disables SSL certificate validation.",
+    )
+    parser.add_argument(
         "-c",
         "--connections",
         type=int,

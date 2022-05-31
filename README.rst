@@ -1,5 +1,5 @@
 ==================================
-qget - Async http downloader
+qget - Async http(s) downloader
 ==================================
 
 **qget** is an Apache2 licensed library, written in Python, for downloading web
@@ -16,6 +16,7 @@ Features
 - support for using own event loop in asyncio by qget_coro coroutine
 - support for limiting RAM usage with settings ``chunk_bytes`` and ``max_part_mb``
 - automatic measurement of simultaneous connection limit
+- support for HTTPS connection with basic auth and SSL verification skip
 
 Requirements
 ============
@@ -69,6 +70,8 @@ Function arguments:
   filepath (str, optional): Output path for downloaded resource.
       If not set it points to current working directory and filename from url. Defaults to None.
   override (bool, optional): Flag if existing output file should be override. Defaults to False.
+  auth (str, optional): String of user:password pair for SSL connection. Defaults to None.
+  verify_ssl (bool, optional): Flag if SSL certificate validation should be performed. Defaults to True.
   progress_ref (ProgressState, optional): Reference to progress state.
       If passed all parts bytes and rewrite status will be updated in it. Defaults to None.
   max_connections (int, optional): Maximum amount of asynchronous HTTP connections. Defaults to 50.
@@ -143,9 +146,10 @@ Command line
 
 .. code-block:: text
 
-  usage: qget [-h] [-o FILEPATH] [-f] [-c MAX_CONNECTIONS] [--test CONNECTION_TEST_SEC]
-                [--bytes CHUNK_BYTES] [--part MAX_PART_MB] [--tmp TMP_DIR] [--debug]
-                url
+  usage: qget [-h] [-o FILEPATH] [-f] [-a AUTH] [--no_ssl] [-c MAX_CONNECTIONS]
+              [--test CONNECTION_TEST_SEC] [--bytes CHUNK_BYTES] [--part MAX_PART_MB]
+              [--tmp TMP_DIR] [--debug]
+              url
 
   Downloads resource from given URL in buffered parts using asynchronous HTTP connections
   with aiohttp session.
@@ -158,6 +162,8 @@ Command line
     -o FILEPATH, --output FILEPATH
                           Output path for downloaded resource.
     -f, --force           Forces file override for output.
+    -a AUTH, --auth AUTH  String of user:password pair for SSL connection.
+    --no_ssl              Disables SSL certificate validation.
     -c MAX_CONNECTIONS, --connections MAX_CONNECTIONS
                           Maximum amount of asynchronous HTTP connections.
     --test CONNECTION_TEST_SEC
@@ -179,6 +185,12 @@ Can be used also from python module with same arguments as for binary:
 
 History
 =======
+0.0.6 (2022-05-31)
+------------------
+- Added HTTPS support.
+- Fixed fallback to GET request on failed HEAD Content-Length read.
+- Fixed binary build scripts.
+
 0.0.1 (2022-05-31)
 ------------------
 - Initial version.
