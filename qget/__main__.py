@@ -97,7 +97,7 @@ def _get_parser() -> argparse.ArgumentParser:
         type=int,
         dest="connection_test_sec",
         default=default_args["connection_test_sec"],
-        help="Maximum time in seconds assigned to test how much asynchronous connections"
+        help="Maximum time in seconds assigned to test how much asynchronous connections "
         + "can be achieved to URL. Use 0 to skip.",
     )
     parser.add_argument(

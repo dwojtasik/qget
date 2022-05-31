@@ -167,7 +167,7 @@ Command line
     -c MAX_CONNECTIONS, --connections MAX_CONNECTIONS
                           Maximum amount of asynchronous HTTP connections.
     --test CONNECTION_TEST_SEC
-                          Maximum time in seconds assigned to test how much asynchronous connectionscan be
+                          Maximum time in seconds assigned to test how much asynchronous connections can be
                           achieved to URL. Use 0 to skip.
     --bytes CHUNK_BYTES   Chunk of data read in iteration from url and save to part file in bytes. Will be
                           used also when rewriting parts to output file.
