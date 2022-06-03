@@ -2,6 +2,14 @@
 qget - Async http(s) downloader
 ==================================
 
+.. image:: https://img.shields.io/pypi/v/qget.svg
+   :target: https://pypi.org/project/qget
+   :alt: Latest PyPI package version
+
+.. image:: https://img.shields.io/pypi/pyversions/qget.svg?logo=python&logoColor=white
+   :target: https://pypi.org/project/qget
+   :alt: Python supported versions
+
 **qget** is an Apache2 licensed library, written in Python, for downloading web
 resources in asynchronous manner as fast as possible.
 
@@ -12,11 +20,12 @@ Features
 ========
 
 - an executable script to download file via command line
+- support for HTTPS connection with basic auth and SSL verification skip
+- support for custom headers
 - support for downloading / rewriting progress with callbacks (by default using ``tqdm``)
-- support for using own event loop in asyncio by qget_coro coroutine
 - support for limiting RAM usage with settings ``chunk_bytes`` and ``max_part_mb``
 - automatic measurement of simultaneous connection limit
-- support for HTTPS connection with basic auth and SSL verification skip
+- support for using own event loop in asyncio by ``qget_coro`` coroutine
 
 Requirements
 ============
@@ -64,7 +73,7 @@ Python code
 -----------
 Function arguments:
 
-.. code-block:: python
+.. code-block:: text
 
   url (str): The URL to download the resource.
   filepath (str, optional): Output path for downloaded resource.
@@ -72,6 +81,11 @@ Function arguments:
   override (bool, optional): Flag if existing output file should be override. Defaults to False.
   auth (str, optional): String of user:password pair for SSL connection. Defaults to None.
   verify_ssl (bool, optional): Flag if SSL certificate validation should be performed. Defaults to True.
+  mock_browser (bool, optional): Flag if User-Agent header should be added to request. Defaults to True.
+      Default User-Agent string: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+      (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36'
+  headers: (Dict[str, str], optional): Custom headers to be sent. Default to None.
+      If set user can specify own User-Agent and Accept headers, otherwise defaults will be used.
   progress_ref (ProgressState, optional): Reference to progress state.
       If passed all parts bytes and rewrite status will be updated in it. Defaults to None.
   max_connections (int, optional): Maximum amount of asynchronous HTTP connections. Defaults to 50.
@@ -146,9 +160,9 @@ Command line
 
 .. code-block:: text
 
-  usage: qget [-h] [-o FILEPATH] [-f] [-a AUTH] [--no_ssl] [-c MAX_CONNECTIONS]
-              [--test CONNECTION_TEST_SEC] [--bytes CHUNK_BYTES] [--part MAX_PART_MB]
-              [--tmp TMP_DIR] [--debug]
+  usage: qget [-h] [-o FILEPATH] [-f] [-a AUTH] [--no-ssl] [--no-mock] [-H HEADER_LIST]
+              [-c MAX_CONNECTIONS] [--test CONNECTION_TEST_SEC] [--bytes CHUNK_BYTES]
+              [--part MAX_PART_MB] [--tmp TMP_DIR] [--debug]
               url
 
   Downloads resource from given URL in buffered parts using asynchronous HTTP connections
@@ -163,14 +177,17 @@ Command line
                           Output path for downloaded resource.
     -f, --force           Forces file override for output.
     -a AUTH, --auth AUTH  String of user:password pair for SSL connection.
-    --no_ssl              Disables SSL certificate validation.
+    --no-ssl              Disables SSL certificate validation.
+    --no-mock             Disables default User-Agent header.
+    -H HEADER_LIST, --header HEADER_LIST
+                          Custom header in format 'name:value'.
     -c MAX_CONNECTIONS, --connections MAX_CONNECTIONS
                           Maximum amount of asynchronous HTTP connections.
     --test CONNECTION_TEST_SEC
-                          Maximum time in seconds assigned to test how much asynchronous connections can be
-                          achieved to URL. Use 0 to skip.
-    --bytes CHUNK_BYTES   Chunk of data read in iteration from url and save to part file in bytes. Will be
-                          used also when rewriting parts to output file.
+                          Maximum time in seconds assigned to test how much asynchronous
+                          connections can be achieved to URL. Use 0 to skip.
+    --bytes CHUNK_BYTES   Chunk of data read in iteration from url and save to part file in
+                          bytes. Will be used also when rewriting parts to output file.
     --part MAX_PART_MB    Desirable (if possible) max part size in megabytes.
     --tmp TMP_DIR         Temporary directory path. If not set it points to OS tmp directory.
     --debug               Debug flag.
@@ -183,8 +200,24 @@ Can be used also from python module with same arguments as for binary:
 
   python -m qget https://speed.hetzner.de/100MB.bin
 
+|
+
+Multiple headers can be supplied as follow:
+
+.. code-block:: bash
+
+  python -m qget -H 'name1:value1' -H 'name2:value2' https://speed.hetzner.de/100MB.bin
+
 History
 =======
+0.0.8 (2022-06-04)
+------------------
+- Added User-Agent mock settings.
+- Added custom headers support.
+- Fixed auth validation.
+- Fixed error messages in validation.
+- Changed command line arguments for flags (used '-' instead of '_').
+
 0.0.6 (2022-05-31)
 ------------------
 - Added HTTPS support.

@@ -3,11 +3,11 @@
 """
 qget
 ~~~~~~~~~~~~~
-Async http downloader
+Async http(s) downloader
 :copyright: (c) 2022 by Dominik Wojtasik.
 :license: Apache2, see LICENSE for more details.
 """
-__version__ = "0.0.6"
+__version__ = "0.0.8"
 
 from qget.qget_aio import ProgressState, qget, qget_coro
 

@@ -22,6 +22,10 @@ import aiofiles
 import aiohttp
 
 _UNITS = ["B", "KB", "MB", "GB", "TB"]
+_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36"
+)
 
 
 @dataclass
@@ -179,6 +183,33 @@ def _to_human_readable_unit(byte_count: int, out_format: str = "%.2f %s") -> str
     return out_format % (byte_count / divider, _UNITS[power])
 
 
+def _build_headers(
+    mock_browser: bool = True,
+    headers: Dict[str, str] = None,
+) -> Dict[str, str]:
+    """Builds custom headers.
+
+    Args:
+        mock_browser (bool, optional): Flag if User-Agent header should be added to request. Defaults to True.
+            Default User-Agent string: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+            (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36'
+        headers: (Dict[str, str], optional): Custom headers to be sent. Default to None.
+            If set user can specify own User-Agent and Accept headers, otherwise defaults will be used.
+
+    Returns:
+        Dict[str, str]: The custom headers.
+    """
+    custom_headers = {
+        "accept": "*/*",
+    }
+    if mock_browser:
+        custom_headers["user-agent"] = _USER_AGENT
+    if headers:
+        for k, v in headers.items():
+            custom_headers[k.lower()] = v
+    return custom_headers
+
+
 async def _test_connection(session: aiohttp.ClientSession, url: str) -> int:
     """Tests connection to given URL by creating streaming request and saves status code.
        Stream is keeped alive until cancellation of this coroutine.
@@ -195,8 +226,7 @@ async def _test_connection(session: aiohttp.ClientSession, url: str) -> int:
         async with session.get(
             url,
             headers={
-                "Accept": "*/*",
-                "Range": "bytes=0-",
+                "range": "bytes=0-",
             },
             timeout=None,
         ) as response:
@@ -218,6 +248,7 @@ async def _get_max_connections(
     url: str,
     auth: aiohttp.BasicAuth,
     verify_ssl: bool,
+    headers: Dict[str, str],
     pool: int,
     connection_test_sec: int,
     logger: logging.Logger = None,
@@ -228,6 +259,7 @@ async def _get_max_connections(
         url (str): The URL to be requested.
         auth (aiohttp.BasicAuth): The basic auth for SSL connection.
         verify_ssl (bool): Flag if SSL certificate validation should be performed.
+        headers (Dict[str, str]): Custom headers.
         pool (int): The maximum connections amount provided by the user.
         connection_test_sec (int): Maximum time in seconds assigned to test
             how much asynchronous connections can be achieved to URL.
@@ -237,7 +269,7 @@ async def _get_max_connections(
         int: Number of asynchronous connections achieved.
     """
     connector = aiohttp.TCPConnector(limit=pool, verify_ssl=verify_ssl)
-    async with aiohttp.ClientSession(connector=connector, auth=auth) as session:
+    async with aiohttp.ClientSession(connector=connector, auth=auth, headers=headers) as session:
         tasks = [_test_connection(session, url) for _ in range(pool)]
         done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED, timeout=connection_test_sec)
         for task in pending:
@@ -249,7 +281,7 @@ async def _get_max_connections(
         return len([status for status in statuses if status > 0 and status < 400])
 
 
-async def _get_resource_bytes(url: str, auth: aiohttp.BasicAuth, verify_ssl: bool) -> int:
+async def _get_resource_bytes(url: str, auth: aiohttp.BasicAuth, verify_ssl: bool, headers: Dict[str, str]) -> int:
     """Returns resource bytes from Content-Length header if possible.
        If HEAD request is not available for give resource URL, GET will be performed.
 
@@ -257,6 +289,7 @@ async def _get_resource_bytes(url: str, auth: aiohttp.BasicAuth, verify_ssl: boo
         url (str): The resource URL to read size from.
         auth (aiohttp.BasicAuth): The basic auth for SSL connection.
         verify_ssl (bool): Flag if SSL certificate validation should be performed.
+        headers (Dict[str, str]): Custom headers.
 
     Returns:
         int: The resource bytes. Returns 0 if none of performed requests returns Content-Length header.
@@ -265,7 +298,7 @@ async def _get_resource_bytes(url: str, auth: aiohttp.BasicAuth, verify_ssl: boo
         ValueError: If server disconnects.
     """
     connector = aiohttp.TCPConnector(verify_ssl=verify_ssl)
-    async with aiohttp.ClientSession(connector=connector, auth=auth) as session:
+    async with aiohttp.ClientSession(connector=connector, auth=auth, headers=headers) as session:
         try:
             response = await session.head(url)
             if response.status == 200 and "Content-Length" in response.headers:
@@ -340,8 +373,7 @@ async def _download_part(
     async with session.get(
         url,
         headers={
-            "Accept": "*/*",
-            "Range": f"bytes={part_data.begin}-{part_data.end}",
+            "range": f"bytes={part_data.begin}-{part_data.end}",
         },
         timeout=None,
     ) as response:
@@ -384,6 +416,8 @@ async def qget_coro(
     override: bool = False,
     auth: str = None,
     verify_ssl: bool = True,
+    mock_browser: bool = True,
+    headers: Dict[str, str] = None,
     progress_ref: ProgressState = None,
     max_connections: int = 50,
     connection_test_sec: int = 5,
@@ -392,7 +426,7 @@ async def qget_coro(
     tmp_dir: str = None,
     debug: bool = False,
 ) -> None:
-    """Download resource from given URL in buffered parts using asynchronous HTTP connections with aiohttp session.
+    """Download resource from given URL in buffered parts using asynchronous HTTP(S) connections with aiohttp session.
 
     Args:
         url (str): The URL to download the resource.
@@ -401,6 +435,11 @@ async def qget_coro(
         override (bool, optional): Flag if existing output file should be override. Defaults to False.
         auth (str, optional): String of user:password pair for SSL connection. Defaults to None.
         verify_ssl (bool, optional): Flag if SSL certificate validation should be performed. Defaults to True.
+        mock_browser (bool, optional): Flag if User-Agent header should be added to request. Defaults to True.
+            Default User-Agent string: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+            (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36'
+        headers: (Dict[str, str], optional): Custom headers to be sent. Default to None.
+            If set user can specify own User-Agent and Accept headers, otherwise defaults will be used.
         progress_ref (ProgressState, optional): Reference to progress state.
             If passed all parts bytes and rewrite status will be updated in it. Defaults to None.
         max_connections (int, optional): Maximum amount of asynchronous HTTP connections. Defaults to 50.
@@ -431,11 +470,15 @@ async def qget_coro(
         if ":" in auth:
             user, password = auth.split(":", 1)
             if len(user) == 0 or len(password) == 0:
-                raise ValueError(f"Parameter auth has to have format of user:password. Actual value: {user}.")
+                raise ValueError(f"Parameter auth has to have format of user:password. Actual value: {auth}.")
             basic_auth = aiohttp.BasicAuth(user, password)
+        else:
+            raise ValueError(f"Parameter auth has to have format of user:password. Actual value: {auth}.")
+
+    custom_headers = _build_headers(mock_browser, headers)
 
     logger.debug("Fetching resource size...")
-    resource_bytes = await _get_resource_bytes(url, basic_auth, verify_ssl)
+    resource_bytes = await _get_resource_bytes(url, basic_auth, verify_ssl, custom_headers)
     if resource_bytes == 0:
         raise ValueError("Given URL does not support stream transfer or does not have Content-Length header provided.")
     if progress_ref:
@@ -445,7 +488,7 @@ async def qget_coro(
     if connection_test_sec > 0:
         logger.debug("Measuring maximum asynchronous connections...")
         aio_connections = await _get_max_connections(
-            url, basic_auth, verify_ssl, max_connections, connection_test_sec, logger
+            url, basic_auth, verify_ssl, custom_headers, max_connections, connection_test_sec, logger
         )
         if aio_connections == 0:
             raise ValueError("Cannot send any asynchronous connection to given resource URL.")
@@ -466,7 +509,7 @@ async def qget_coro(
             return await task
 
     connector = aiohttp.TCPConnector(limit=aio_connections, verify_ssl=verify_ssl)
-    async with aiohttp.ClientSession(connector=connector, auth=basic_auth) as session:
+    async with aiohttp.ClientSession(connector=connector, auth=basic_auth, headers=custom_headers) as session:
         part_bytes = min(math.ceil(resource_bytes / aio_connections), int(max_part_mb * 1024 * 1024))
         part_count = math.ceil(resource_bytes / part_bytes)
         logger.debug("Set parts as: %d x %s", part_count, _to_human_readable_unit(part_bytes))
@@ -524,6 +567,11 @@ def qget(url: str, **kwargs) -> None:
         override (bool, optional): Flag if existing output file should be override. Defaults to False.
         auth (str, optional): String of user:password pair for SSL connection. Defaults to None.
         verify_ssl (bool, optional): Flag if SSL certificate validation should be performed. Defaults to True.
+        mock_browser (bool, optional): Flag if User-Agent header should be added to request. Defaults to True.
+            Default User-Agent string: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+            (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36'
+        headers: (Dict[str, str], optional): Custom headers to be sent. Default to None.
+            If set user can specify own User-Agent and Accept headers, otherwise defaults will be used.
         progress_ref (ProgressState, optional): Reference to progress state.
             If passed all parts bytes and rewrite status will be updated in it. Defaults to None.
         max_connections (int, optional): Maximum amount of asynchronous HTTP connections. Defaults to 50.

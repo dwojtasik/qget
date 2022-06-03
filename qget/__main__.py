@@ -78,11 +78,26 @@ def _get_parser() -> argparse.ArgumentParser:
         help="String of user:password pair for SSL connection.",
     )
     parser.add_argument(
-        "--no_ssl",
+        "--no-ssl",
         action="store_false",
         dest="verify_ssl",
         default=default_args["verify_ssl"],
         help="Disables SSL certificate validation.",
+    )
+    parser.add_argument(
+        "--no-mock",
+        action="store_false",
+        dest="mock_browser",
+        default=default_args["mock_browser"],
+        help="Disables default User-Agent header.",
+    )
+    parser.add_argument(
+        "-H",
+        "--header",
+        action="append",
+        type=str,
+        dest="header_list",
+        help="Custom header in format 'name:value'.",
     )
     parser.add_argument(
         "-c",
@@ -140,9 +155,22 @@ def _main():
     progress_bar: tqdm = None
     try:
         args = parser.parse_args()
-        url = args.url
         kwargs = vars(args)
-        del kwargs["url"]
+        url = kwargs.pop("url")
+
+        header_list = kwargs.pop("header_list")
+        headers = {}
+        if header_list:
+            for header_string in header_list:
+                if ":" in header_string:
+                    name, value = header_string.split(":", 1)
+                    headers[name] = value
+                else:
+                    raise ValueError(
+                        f"Custom header has to have format of 'name:value'. Actual value: {header_string}."
+                    )
+        if len(headers) > 0:
+            kwargs["headers"] = headers
 
         progress_bar = tqdm(
             desc="Download", total=None, miniters=1024, unit="B", unit_scale=True, unit_divisor=1024, delay=sys.maxsize
