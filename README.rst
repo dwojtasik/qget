@@ -80,10 +80,12 @@ Requirements
 Installation
 ============
 
-You can download selected binary file from Releases. Available versions:
+You can download selected binary file from `Releases <https://github.com/dwojtasik/qget/releases/latest>`_. Available versions:
 
-- Windows 32/64-bit
-- POSIX 32/64-bit
+- Windows 32-bit (qget-|latest_version|-win32.exe)
+- Windows 64-bit (qget-|latest_version|-win_amd64.exe)
+- POSIX 32-bit (qget-|latest_version|-i386)
+- POSIX 64-bit (qget-|latest_version|-amd64)
 
 To install ``qget`` module, simply:
 
@@ -276,3 +278,5 @@ NEXT / DEV
 0.0.1 (2022-05-31)
 ------------------
 - Initial version.
+
+.. |latest_version| replace:: 0.0.8
