@@ -58,11 +58,11 @@ Now let's compare download statistics for ``wget`` and ``qget`` for **1000MB** f
 ||            ||               ||                 || Parts rewrite: 0.58s         |
 +-------------+----------------+------------------+-------------------------------+
 
-|
-| **Conclusion**:
-| For simple rate limiting (*per connection*) ``qget`` allows to achieve **multiple times faster** download speed
-| based on user internet connection speed, number of simultaneous requests and resource server configuration.
-| In example above ``qget`` achived over **24x** download speed of ``wget``.
+**Conclusion**:
+
+For simple rate limiting (*per connection*) ``qget`` allows to achieve **multiple times faster** download speed
+based on user internet connection speed, number of simultaneous requests and resource server configuration.
+In example above ``qget`` achived over **24x** download speed of ``wget``.
 
 For more complicated cases (*e.g. connections limit per IP*) automatic connection limit measurement test was
 created to calculate how many simultaneous requests could be achieved before server rejects next one.
