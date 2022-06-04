@@ -10,6 +10,10 @@ qget - Async http(s) downloader
    :target: https://pypi.org/project/qget
    :alt: Python supported versions
 
+.. image:: https://img.shields.io/pypi/l/qget.svg
+   :target: https://raw.githubusercontent.com/dwojtasik/qget/main/LICENSE
+   :alt: License
+
 **qget** is an Apache2 licensed library, written in Python, for downloading web
 resources in asynchronous manner as fast as possible.
 
@@ -160,9 +164,9 @@ Command line
 
 .. code-block:: text
 
-  usage: qget [-h] [-o FILEPATH] [-f] [-a AUTH] [--no-ssl] [--no-mock] [-H HEADER_LIST]
+  usage: qget [-h] [-o FILEPATH] [-f] [-a AUTH] [--no-ssl] [--no-mock] [-H HEADER]
               [-c MAX_CONNECTIONS] [--test CONNECTION_TEST_SEC] [--bytes CHUNK_BYTES]
-              [--part MAX_PART_MB] [--tmp TMP_DIR] [--debug]
+              [--part MAX_PART_MB] [--tmp TMP_DIR] [--debug] [-v]
               url
 
   Downloads resource from given URL in buffered parts using asynchronous HTTP connections
@@ -179,7 +183,7 @@ Command line
     -a AUTH, --auth AUTH  String of user:password pair for SSL connection.
     --no-ssl              Disables SSL certificate validation.
     --no-mock             Disables default User-Agent header.
-    -H HEADER_LIST, --header HEADER_LIST
+    -H HEADER, --header HEADER
                           Custom header in format 'name:value'.
     -c MAX_CONNECTIONS, --connections MAX_CONNECTIONS
                           Maximum amount of asynchronous HTTP connections.
@@ -189,8 +193,10 @@ Command line
     --bytes CHUNK_BYTES   Chunk of data read in iteration from url and save to part file in
                           bytes. Will be used also when rewriting parts to output file.
     --part MAX_PART_MB    Desirable (if possible) max part size in megabytes.
-    --tmp TMP_DIR         Temporary directory path. If not set it points to OS tmp directory.
+    --tmp TMP_DIR         Temporary directory path. If not set it points to OS tmp
+                          directory.
     --debug               Debug flag.
+    -v, --version         Displays actual version of qget.
 
 |
 
@@ -210,6 +216,10 @@ Multiple headers can be supplied as follow:
 
 History
 =======
+NEXT / DEV
+------------------
+- Added version flag for command line usage.
+
 0.0.8 (2022-06-04)
 ------------------
 - Added User-Agent mock settings.

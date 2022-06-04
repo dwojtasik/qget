@@ -14,7 +14,7 @@ from typing import Any, Dict
 
 from tqdm import tqdm
 
-from qget.qget_aio import ProgressState, qget, qget_coro
+from qget import ProgressState, qget, qget_coro, __version__
 
 
 def _get_logger() -> logging.Logger:
@@ -96,7 +96,7 @@ def _get_parser() -> argparse.ArgumentParser:
         "--header",
         action="append",
         type=str,
-        dest="header_list",
+        dest="header",
         help="Custom header in format 'name:value'.",
     )
     parser.add_argument(
@@ -144,6 +144,13 @@ def _get_parser() -> argparse.ArgumentParser:
         default=default_args["debug"],
         help="Debug flag.",
     )
+    parser.add_argument(
+        "-v",
+        "--version",
+        action="version",
+        version=f"qget v{__version__}",
+        help="Displays actual version of qget.",
+    )
     parser.add_argument("url", type=str, help="URL of resource")
     return parser
 
@@ -156,9 +163,8 @@ def _main():
     try:
         args = parser.parse_args()
         kwargs = vars(args)
-        url = kwargs.pop("url")
 
-        header_list = kwargs.pop("header_list")
+        header_list = kwargs.pop("header")
         headers = {}
         if header_list:
             for header_string in header_list:
@@ -171,6 +177,8 @@ def _main():
                     )
         if len(headers) > 0:
             kwargs["headers"] = headers
+
+        url = kwargs.pop("url")
 
         progress_bar = tqdm(
             desc="Download", total=None, miniters=1024, unit="B", unit_scale=True, unit_divisor=1024, delay=sys.maxsize
