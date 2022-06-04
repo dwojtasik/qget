@@ -20,16 +20,18 @@ resources in asynchronous manner as fast as possible.
 Under the hood it benefits from ``asyncio`` and ``aiohttp`` to create multiple
 simultaneous connections to resource and download it using buffered part files.
 
+.. contents:: **Table of Contents**
+
 Features
 ========
 
 - an executable script to download file via command line
 - support for HTTPS connection with basic auth and SSL verification skip
 - support for custom headers
+- automatic measurement of simultaneous connection limit
 - support for downloading / rewriting progress with callbacks (by default using ``tqdm``)
 - support for limiting RAM usage with settings ``chunk_bytes`` and ``max_part_mb``
-- automatic measurement of simultaneous connection limit
-- support for using own event loop in asyncio by ``qget_coro`` coroutine
+- support for using own event loop in ``asyncio`` by ``qget_coro`` coroutine
 
 Motivation: ``wget`` vs ``qget``
 ================================
@@ -83,7 +85,7 @@ You can download selected binary file from Releases. Available versions:
 - Windows 32/64-bit
 - POSIX 32/64-bit
 
-To install **qget** module, simply:
+To install ``qget`` module, simply:
 
 .. code-block:: bash
 
@@ -152,7 +154,7 @@ To use in code simply import module function:
 
 |
 
-To use in code with own loop and **asyncio**:
+To use in code with own loop and ``asyncio``:
 
 .. code-block:: python
 
@@ -170,9 +172,10 @@ To use in code with own loop and **asyncio**:
   loop.run_until_complete(main(loop))
   loop.close()
 
-|
+Progress hooks
+**************
 
-Usage for progress hooks (by default hooks are used to display **tqdm** progress bar):
+Usage for progress hooks (by default hooks are used to display ``tqdm`` progress bar):
 
 .. code-block:: python
 
