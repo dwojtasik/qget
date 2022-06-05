@@ -78,7 +78,7 @@ def _get_parser() -> argparse.ArgumentParser:
         help="String of user:password pair for SSL connection.",
     )
     parser.add_argument(
-        "--no-ssl",
+        "--no-verify",
         action="store_false",
         dest="verify_ssl",
         default=default_args["verify_ssl"],
@@ -97,7 +97,7 @@ def _get_parser() -> argparse.ArgumentParser:
         action="append",
         type=str,
         dest="header",
-        help="Custom header in format 'name:value'.",
+        help="Custom header in format 'name:value'. Can be supplied multiple times.",
     )
     parser.add_argument(
         "-c",

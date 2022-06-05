@@ -28,7 +28,7 @@ Features
 - an executable script to download file via command line
 - support for HTTPS connection with basic auth and SSL verification skip
 - support for custom headers
-- automatic measurement of simultaneous connection limit
+- automatic measurement of simultaneous connections limit
 - support for downloading / rewriting progress with callbacks (by default using ``tqdm``)
 - support for limiting RAM usage with settings ``chunk_bytes`` and ``max_part_mb``
 - support for using own event loop in ``asyncio`` by ``qget_coro`` coroutine
@@ -48,7 +48,8 @@ Consider simple ``nginx`` configuration fragment like this:
   }
 
 
-Now let's compare download statistics for ``wget`` and ``qget`` for **1000MB** file and above configuration:
+Now let's compare download statistics for ``wget`` and ``qget`` for **1000MB** file and configuration
+mentioned above:
 
 +-------------+----------------+------------------+-------------------------------+
 | Application | Total time [s] | AVG Speed [MB/s] | Details                       |
@@ -72,7 +73,7 @@ created to calculate how many simultaneous requests could be achieved before ser
 Requirements
 ============
 
-- Python >= 3.7
+- `Python <https://www.python.org/>`_ >= 3.7
 - `aiohttp <https://pypi.org/project/aiohttp/>`_
 - `aiofiles <https://pypi.org/project/aiofiles/>`_
 - `tqdm <https://pypi.org/project/tqdm/>`_
@@ -80,7 +81,8 @@ Requirements
 Installation
 ============
 
-You can download selected binary file from `Releases <https://github.com/dwojtasik/qget/releases/latest>`_. Available versions:
+You can download selected binary files from `Releases <https://github.com/dwojtasik/qget/releases/latest>`_.
+Available versions:
 
 - Windows 32-bit (qget-|latest_version|-win32.exe)
 - Windows 64-bit (qget-|latest_version|-win_amd64.exe)
@@ -205,7 +207,7 @@ Command line
 
 .. code-block:: text
 
-  usage: qget [-h] [-o FILEPATH] [-f] [-a AUTH] [--no-ssl] [--no-mock] [-H HEADER]
+  usage: qget [-h] [-o FILEPATH] [-f] [-a AUTH] [--no-verify] [--no-mock] [-H HEADER]
               [-c MAX_CONNECTIONS] [--test CONNECTION_TEST_SEC] [--bytes CHUNK_BYTES]
               [--part MAX_PART_MB] [--tmp TMP_DIR] [--debug] [-v]
               url
@@ -222,10 +224,11 @@ Command line
                           Output path for downloaded resource.
     -f, --force           Forces file override for output.
     -a AUTH, --auth AUTH  String of user:password pair for SSL connection.
-    --no-ssl              Disables SSL certificate validation.
+    --no-verify           Disables SSL certificate validation.
     --no-mock             Disables default User-Agent header.
     -H HEADER, --header HEADER
-                          Custom header in format 'name:value'.
+                          Custom header in format 'name:value'. Can be supplied multiple
+                          times.
     -c MAX_CONNECTIONS, --connections MAX_CONNECTIONS
                           Maximum amount of asynchronous HTTP connections.
     --test CONNECTION_TEST_SEC
@@ -260,6 +263,7 @@ History
 NEXT / DEV
 ------------------
 - Added version flag for command line usage.
+- Renamed --no-ssl flag to --no-verify.
 
 0.0.8 (2022-06-04)
 ------------------
