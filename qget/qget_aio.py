@@ -8,6 +8,7 @@ Coroutine for downloading files fast with asyncio and aiohttp
 
 import asyncio
 import glob
+import io
 import logging
 import math
 import os
@@ -22,6 +23,7 @@ import aiofiles
 import aiohttp
 
 _UNITS = ["B", "KB", "MB", "GB", "TB"]
+_LIMIT_UNITS = {"b": 1, "k": 1024, "m": 1024**2, "g": 1024**3}
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36"
@@ -40,6 +42,89 @@ class PartData:
     part_id: str
     begin: int
     end: int
+
+
+class Limiter:
+    """Limits download rate by sleep awaiting in intervals between iteration over stream content.
+
+    Leaky bucket like implementation for rate limiting.
+
+    rate_limit_bps (int): Desired byte count that should be downloaded per second.
+    connections (int): Number of asynchronous connections.
+    chunk_bytes (int): Chunk size in bytes that should be used for iteration over stream content to achieve
+        good accuracy. Minimum value is set to 1024B as lower values reduce rate of downloading.
+    """
+
+    def __init__(self, rate_limit_bps: int, connections: int):
+        self.rate_limit_bps = rate_limit_bps
+        self.chunk_bytes = max(int(rate_limit_bps / connections / 100), 1024)
+        self._bucket = 0
+        self._timestamp = 0
+
+    def start(self) -> None:
+        """Sets timestamp of download start."""
+        self._timestamp = time.time()
+
+    async def throttle(self, byte_count: int) -> None:
+        """Limits download rate by awaiting sleep if actual rate is exceeding limit.
+
+        Args:
+            byte_count (int): Count of latest downloaded bytes.
+        """
+        self._bucket += byte_count
+        bucket_time = time.time() - self._timestamp
+        bucket_bytes = bucket_time * self.rate_limit_bps
+        if self._bucket > bucket_bytes:
+            await asyncio.sleep(self._bucket / self.rate_limit_bps - bucket_time)
+
+
+class FileBuffer:
+    """Keeps data that should be written to file in IO buffer.
+
+    Used only when Limiter is supplied for downloading.
+
+    handle (aiofiles.base.AsyncBase): File to store data.
+    buffer_size (int): Maximum amount of bytes that can be stored in internal IO buffer.
+    """
+
+    def __init__(self, handle: aiofiles.base.AsyncBase, buffer_size: int):
+        self._buffer = io.BytesIO()
+        self._handle = handle
+        self._buffer_size = buffer_size
+        self._buffer_bytes = 0
+
+    async def _write_to_handle(self, close: bool = False):
+        """Writes data from internal buffer to file.
+
+        Args:
+            close (bool, optional): Flag if internal buffer should be closed. Defaults to False.
+        """
+        await self._handle.write(self._buffer.getvalue())
+        self._buffer.truncate(0)
+        self._buffer.seek(0)
+        self._buffer_bytes = 0
+        if close:
+            self._buffer.close()
+
+    async def write(self, data: bytes):
+        """Writes data to internal buffer.
+
+        Data will be written to file if buffer contains more data than self._buffer_size limit.
+
+        Args:
+            data (bytes): Data to be written.
+        """
+        data_bytes = len(data)
+        self._buffer.write(data)
+        self._buffer_bytes += data_bytes
+        if self._buffer_bytes > self._buffer_size:
+            await self._write_to_handle()
+
+    async def close(self):
+        """Closes internal buffer after flushing it's content to file.
+
+        Should be always called at the end of file processing."""
+        await self._write_to_handle(True)
 
 
 class ProgressState:
@@ -67,8 +152,8 @@ class ProgressState:
         self.download_start_timestamp_ms = 0
         self.download_end_timestamp_ms = 0
         self.rewrite_end_timestamp_ms = 0
-        self.on_download_progress = on_download_progress
-        self.on_rewrite_progress = on_rewrite_progress
+        self._on_download_progress = on_download_progress
+        self._on_rewrite_progress = on_rewrite_progress
 
     def init_parts_bytes(self, part_count: int, part_zfill: int) -> None:
         """Initializes values in dictionary for parts download progress.
@@ -89,8 +174,8 @@ class ProgressState:
             byte_count (int): Count of new bytes that were downloaded since last update.
         """
         self.parts_bytes[part_id] += byte_count
-        if self.on_download_progress:
-            self.on_download_progress(self)
+        if self._on_download_progress:
+            self._on_download_progress(self)
 
     def update_rewrite_progress(self, byte_count: int) -> None:
         """Updates value of rewrite progress.
@@ -101,8 +186,8 @@ class ProgressState:
             byte_count (int): Count of bytes that was rewritten into output file.
         """
         self.rewrite_bytes = byte_count
-        if self.on_rewrite_progress:
-            self.on_rewrite_progress(self)
+        if self._on_rewrite_progress:
+            self._on_rewrite_progress(self)
 
     def get_download_bytes(self) -> int:
         """Returns overall download byte count.
@@ -205,8 +290,8 @@ def _build_headers(
     if mock_browser:
         custom_headers["user-agent"] = _USER_AGENT
     if headers:
-        for k, v in headers.items():
-            custom_headers[k.lower()] = v
+        for h_name, h_value in headers.items():
+            custom_headers[h_name.lower()] = h_value
     return custom_headers
 
 
@@ -351,12 +436,52 @@ def _validate_settings(max_connections: int, connection_test_sec: int, chunk_byt
         raise ValueError(f"Parameter max_part_mb has to have positive value. Actual value: {max_part_mb}.")
 
 
+def _parse_limit(limit: str) -> int:
+    """Parses rate limit string to bytes per second value.
+
+    Args:
+        limit (str, optional): Download rate limit in MBps. Can be supplied with unit as "Nunit", eg. "5M".
+            Valid units (case insensitve): b, k, m, g, kb, mb, gb. 0 bytes will be treat as no limit. Defaults to None.
+
+    Returns:
+        int: Bytes per second value.
+
+    Raises:
+        ValueError: If limit string cannot be parsed.
+    """
+    if limit is None:
+        return 0
+    if len(limit) == 0:
+        raise ValueError("Parameter limit cannot be empty if supplied.")
+    unit = limit.lower().lstrip("0123456789")
+    if len(unit) == 0:
+        unit = "m"
+    if unit not in _LIMIT_UNITS:
+        raise ValueError(
+            (
+                "Parameter limit constains invalid unit. Valid units (case insensitve): b, k, m, g, kb, mb, gb. "
+                f"Actual value: {limit}"
+            )
+        )
+    value = limit[: -len(unit)]
+    if len(value) == 0:
+        raise ValueError("Parameter limit cannot be empty if supplied.")
+    try:
+        value = int(value) * _LIMIT_UNITS[unit]
+    except ValueError as ex:
+        raise ValueError(f"Parameter limit has invalid numeric value. Actual value: {limit}.") from ex
+    if value < 0:
+        raise ValueError(f"Parameter limit cannot be negative. Actual value: {limit}.")
+    return value
+
+
 async def _download_part(
     session: aiohttp.ClientSession,
     url: str,
     tmp_dir: str,
     part_data: PartData,
     chunk_bytes: int,
+    limiter: Limiter = None,
     progress_ref: ProgressState = None,
 ) -> None:
     """Downloads part of resource URL and stores it in temporary file.
@@ -367,9 +492,13 @@ async def _download_part(
         tmp_dir (str): Temporary directory path to save part file.
         part_data (PartData): Basic informations about part.
         chunk_bytes (int): Chunk of data read in iteration from url and save to part file in bytes.
+        limiter (Limiter, optional): Limiter for download rate. If supplied FileBuffer will be used and chunk_bytes
+            for stream iteration will be overriden with new calculated value. Defaults to None.
         progress_ref (ProgressState, optional): Reference to progress state.
             If passed part bytes will be updated in it. Defaults to None.
     """
+    has_limit = limiter is not None
+    iter_size = limiter.chunk_bytes if has_limit else chunk_bytes
     async with session.get(
         url,
         headers={
@@ -378,10 +507,19 @@ async def _download_part(
         timeout=None,
     ) as response:
         async with aiofiles.open(f"{tmp_dir}/part-{part_data.part_id}.cr", "wb") as part_file:
-            async for chunk in response.content.iter_chunked(chunk_bytes):
-                await part_file.write(chunk)
+            if has_limit:
+                file_buffer = FileBuffer(part_file, chunk_bytes)
+            async for chunk in response.content.iter_chunked(iter_size):
+                byte_count = len(chunk)
                 if progress_ref:
-                    progress_ref.update_part_progress(part_data.part_id, len(chunk))
+                    progress_ref.update_part_progress(part_data.part_id, byte_count)
+                if has_limit:
+                    await limiter.throttle(byte_count)
+                    await file_buffer.write(chunk)
+                else:
+                    await part_file.write(chunk)
+            if has_limit:
+                await file_buffer.close()
 
 
 async def _rewrite_parts(filepath: str, tmp_dir: str, chunk_bytes: int, progress_ref: ProgressState = None) -> None:
@@ -423,6 +561,7 @@ async def qget_coro(
     connection_test_sec: int = 5,
     chunk_bytes: int = 2621440,
     max_part_mb: float = 5.0,
+    limit: str = None,
     tmp_dir: str = None,
     debug: bool = False,
 ) -> None:
@@ -446,8 +585,12 @@ async def qget_coro(
         connection_test_sec (int, optional): Maximum time in seconds assigned to test
             how much asynchronous connections can be achieved to URL. If set to 0 test will be omitted. Defaults to 5.
         chunk_bytes (int, optional): Chunk of data read in iteration from url and save to part file in bytes.
-            Will be used also when rewriting parts to output file. Defaults to 2621440.
+            Will be used also when rewriting parts to output file. If limit is supplied this can be override for
+            stream iteration. Defaults to 2621440.
         max_part_mb (float, optional): Desirable (if possible) max part size in megabytes. Defaults to 5.
+        limit (str, optional): Download rate limit in MBps. Can be supplied with unit as "Nunit", eg. "5M".
+            Valid units (case insensitive): b, k, m, g, kb, mb, gb. 0 bytes will be treat as no limit.
+            Defaults to None.
         tmp_dir (str, optional): Temporary directory path. If not set it points to OS tmp directory. Defaults to None.
         debug (bool, optional): Debug flag. Defaults to False.
 
@@ -464,6 +607,7 @@ async def qget_coro(
 
     _validate_paths(filepath, override, tmp_dir)
     _validate_settings(max_connections, connection_test_sec, chunk_bytes, max_part_mb)
+    limit_bps = _parse_limit(limit)
 
     basic_auth = None
     if auth is not None:
@@ -508,6 +652,11 @@ async def qget_coro(
         async with semaphore:
             return await task
 
+    limiter: Limiter = None
+    if limit_bps > 0:
+        limiter = Limiter(limit_bps, aio_connections)
+        logger.debug("Overrided chunk_bytes for stream iteration to new value=%d due to limiter.", limiter.chunk_bytes)
+
     connector = aiohttp.TCPConnector(limit=aio_connections, verify_ssl=verify_ssl)
     async with aiohttp.ClientSession(connector=connector, auth=basic_auth, headers=custom_headers) as session:
         part_bytes = min(math.ceil(resource_bytes / aio_connections), int(max_part_mb * 1024 * 1024))
@@ -528,6 +677,7 @@ async def qget_coro(
                         resource_bytes if part == part_count - 1 else begin + part_bytes - 1,
                     ),
                     chunk_bytes,
+                    limiter,
                     progress_ref,
                 )
             )
@@ -538,6 +688,8 @@ async def qget_coro(
         download_start = round(time.time() * 1000)
         if progress_ref:
             progress_ref.download_start_timestamp_ms = download_start
+        if limiter is not None:
+            limiter.start()
         await asyncio.gather(*tasks)
         download_end = round(time.time() * 1000)
         if progress_ref:
@@ -580,6 +732,9 @@ def qget(url: str, **kwargs) -> None:
         chunk_bytes (int, optional): Chunk of data read in iteration from url and save to part file in bytes.
             Will be used also when rewriting parts to output file. Defaults to 2621440.
         max_part_mb (float, optional): Desirable (if possible) max part size in megabytes. Defaults to 5.
+        limit (str, optional): Download rate limit in MBps. Can be supplied with unit as "Nunit", eg. "5M".
+            Valid units (case insensitive): b, k, m, g, kb, mb, gb. 0 bytes will be treat as no limit.
+            Defaults to None.
         tmp_dir (str, optional): Temporary directory path. If not set it points to OS tmp directory. Defaults to None.
         debug (bool, optional): Debug flag. Defaults to False.
     """

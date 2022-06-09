@@ -131,6 +131,14 @@ def _get_parser() -> argparse.ArgumentParser:
         help="Desirable (if possible) max part size in megabytes.",
     )
     parser.add_argument(
+        "--limit",
+        type=str,
+        dest="limit",
+        default=default_args["limit"],
+        help="Download rate limit in MBps. Can be supplied with unit as 'Nunit', eg. '5M'. "
+        + "Valid units (case insensitive): b, k, m, g, kb, mb, gb. 0 bytes will be treat as no limit.",
+    )
+    parser.add_argument(
         "--tmp",
         type=str,
         dest="tmp_dir",

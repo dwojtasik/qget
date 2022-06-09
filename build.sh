@@ -4,7 +4,7 @@
 
 source ~/anaconda3/etc/profile.d/conda.sh
 
-VERSION=0.0.8
+VERSION=0.1.1
 
 #32bit
 export CONDA_FORCE_32BIT=1

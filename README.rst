@@ -29,6 +29,7 @@ Features
 - support for HTTPS connection with basic auth and SSL verification skip
 - support for custom headers
 - automatic measurement of simultaneous connections limit
+- support for limiting download rate
 - support for downloading / rewriting progress with callbacks (by default using ``tqdm``)
 - support for limiting RAM usage with settings ``chunk_bytes`` and ``max_part_mb``
 - support for using own event loop in ``asyncio`` by ``qget_coro`` coroutine
@@ -139,8 +140,12 @@ Function arguments:
       how much asynchronous connections can be achieved to URL.
       If set to 0 test will be omitted. Defaults to 5.
   chunk_bytes (int, optional): Chunk of data read in iteration from url and save to part file in bytes.
-      Will be used also when rewriting parts to output file. Defaults to 2621440.
+      Will be used also when rewriting parts to output file. If limit is supplied this can be override for
+      stream iteration. Defaults to 2621440.
   max_part_mb (float, optional): Desirable (if possible) max part size in megabytes. Defaults to 5.
+  limit (str, optional): Download rate limit in MBps. Can be supplied with unit as "Nunit", eg. "5M".
+      Valid units (case insensitive): b, k, m, g, kb, mb, gb. 0 bytes will be treat as no limit.
+      Defaults to None.
   tmp_dir (str, optional): Temporary directory path. If not set it points to OS tmp directory.
       Defaults to None.
   debug (bool, optional): Debug flag. Defaults to False.
@@ -209,7 +214,7 @@ Command line
 
   usage: qget [-h] [-o FILEPATH] [-f] [-a AUTH] [--no-verify] [--no-mock] [-H HEADER]
               [-c MAX_CONNECTIONS] [--test CONNECTION_TEST_SEC] [--bytes CHUNK_BYTES]
-              [--part MAX_PART_MB] [--tmp TMP_DIR] [--debug] [-v]
+              [--part MAX_PART_MB] [--limit LIMIT] [--tmp TMP_DIR] [--debug] [-v]
               url
 
   Downloads resource from given URL in buffered parts using asynchronous HTTP connections
@@ -237,6 +242,9 @@ Command line
     --bytes CHUNK_BYTES   Chunk of data read in iteration from url and save to part file in
                           bytes. Will be used also when rewriting parts to output file.
     --part MAX_PART_MB    Desirable (if possible) max part size in megabytes.
+    --limit LIMIT         Download rate limit in MBps. Can be supplied with unit as 'Nunit',
+                          eg. '5M'. Valid units (case insensitive): b, k, m, g, kb, mb, gb.
+                          0 bytes will be treat as no limit.
     --tmp TMP_DIR         Temporary directory path. If not set it points to OS tmp
                           directory.
     --debug               Debug flag.
@@ -262,8 +270,12 @@ History
 =======
 NEXT / DEV
 ------------------
+
+0.1.1 (2022-06-09)
+------------------
 - Added version flag for command line usage.
 - Renamed --no-ssl flag to --no-verify.
+- Added rate limiter with multiple unit support.
 
 0.0.8 (2022-06-04)
 ------------------
@@ -283,4 +295,4 @@ NEXT / DEV
 ------------------
 - Initial version.
 
-.. |latest_version| replace:: 0.0.8
+.. |latest_version| replace:: 0.1.1
