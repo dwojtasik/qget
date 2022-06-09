@@ -266,16 +266,35 @@ Multiple headers can be supplied as follow:
 
   python -m qget -H 'name1:value1' -H 'name2:value2' https://speed.hetzner.de/100MB.bin
 
+Notes
+=====
+Limiter
+-------
+Limiter tries to reduce rate of downloaded bytes by adding pauses between iteration over resource content.
+If very low download rate is requested try to lower connections amount (``max_connections`` or ``--connections
+MAX_CONNECTIONS``) to achieve better accuracy for limit.
+
+Part size
+---------
+Part size is calculated in runtime based on resource size in bytes and maximum amount of asynchronous
+connections set by user (or connection test). Max part size param (``max_part_mb`` or ``--part MAX_PART_MB``)
+supplied by user is use as a top limit for calulated value.
+
+.. code-block:: text
+
+   part_bytes = min(resource_bytes/connections, max_part_bytes)
+
 History
 =======
 NEXT / DEV
 ------------------
+- TBD
 
 0.1.1 (2022-06-09)
 ------------------
+- Added rate limiter with multiple unit support.
 - Added version flag for command line usage.
 - Renamed --no-ssl flag to --no-verify.
-- Added rate limiter with multiple unit support.
 
 0.0.8 (2022-06-04)
 ------------------
