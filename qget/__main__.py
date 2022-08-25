@@ -169,7 +169,7 @@ def _main():
     parser = _get_parser()
     progress_bar: tqdm = None
     try:
-        args = parser.parse_args()
+        args = parser.parse_intermixed_args()
         kwargs = vars(args)
 
         header_list = kwargs.pop("header")

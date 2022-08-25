@@ -288,7 +288,7 @@ History
 =======
 NEXT / DEV
 ------------------
-- TBD
+- Added argument position mixing for command line usage.
 
 0.1.1 (2022-06-09)
 ------------------
