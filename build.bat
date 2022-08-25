@@ -2,7 +2,7 @@
 :: Run this in anaconda3
 ::=========================
 
-set VERSION=0.1.1
+set VERSION=0.1.4
 
 ::32bit
 set CONDA_FORCE_32BIT=1

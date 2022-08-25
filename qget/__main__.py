@@ -92,6 +92,13 @@ def _get_parser() -> argparse.ArgumentParser:
         help="Disables default User-Agent header.",
     )
     parser.add_argument(
+        "--proxy",
+        type=str,
+        dest="proxy_url",
+        default=default_args["proxy_url"],
+        help="HTTP/SOCKS4/SOCKS5 proxy url in format 'protocol://user:password@ip:port'.",
+    )
+    parser.add_argument(
         "-H",
         "--header",
         action="append",

@@ -33,6 +33,7 @@ Features
 - support for downloading / rewriting progress with callbacks (by default using ``tqdm``)
 - support for limiting RAM usage with settings ``chunk_bytes`` and ``max_part_mb``
 - support for using own event loop in ``asyncio`` by ``qget_coro`` coroutine
+- support for SOCKS4(a), SOCKS5(h), HTTP (tunneling) proxy
 
 Motivation: ``wget`` vs ``qget``
 ================================
@@ -77,6 +78,7 @@ Requirements
 - `Python <https://www.python.org/>`_ >= 3.7
 - `aiohttp <https://pypi.org/project/aiohttp/>`_
 - `aiofiles <https://pypi.org/project/aiofiles/>`_
+- `aiohttp-socks <https://pypi.org/project/aiohttp-socks/>`_
 - `tqdm <https://pypi.org/project/tqdm/>`_
 
 Installation
@@ -131,6 +133,8 @@ Function arguments:
   mock_browser (bool, optional): Flag if User-Agent header should be added to request. Defaults to True.
       Default User-Agent string: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
       (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36'
+  proxy_url (str, optional): HTTP/SOCKS4/SOCKS5 proxy url in format 'protocol://user:password@ip:port'.
+      Defaults to None.
   headers: (Dict[str, str], optional): Custom headers to be sent. Default to None.
       If set user can specify own User-Agent and Accept headers, otherwise defaults will be used.
   progress_ref (ProgressState, optional): Reference to progress state.
@@ -231,6 +235,8 @@ Command line
     -a AUTH, --auth AUTH  String of user:password pair for SSL connection.
     --no-verify           Disables SSL certificate validation.
     --no-mock             Disables default User-Agent header.
+    --proxy PROXY_URL     HTTP/SOCKS4/SOCKS5 proxy url in format
+                          'protocol://user:password@ip:port'.
     -H HEADER, --header HEADER
                           Custom header in format 'name:value'. Can be supplied multiple
                           times.
@@ -286,8 +292,9 @@ supplied by user is use as a top limit for calulated value.
 
 History
 =======
-NEXT / DEV
+0.1.4 (2022-08-25)
 ------------------
+- Added support for SOCKS4(a), SOCKS5(h), HTTP (tunneling) proxy.
 - Added argument position mixing for command line usage.
 
 0.1.1 (2022-06-09)
@@ -314,4 +321,4 @@ NEXT / DEV
 ------------------
 - Initial version.
 
-.. |latest_version| replace:: 0.1.1
+.. |latest_version| replace:: 0.1.4

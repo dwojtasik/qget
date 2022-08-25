@@ -18,9 +18,11 @@ import time
 from dataclasses import dataclass
 from typing import Callable, Dict
 from urllib.parse import unquote, urlparse
+from python_socks import parse_proxy_url
 
 import aiofiles
 import aiohttp
+from aiohttp_socks import ProxyConnector
 
 _UNITS = ["B", "KB", "MB", "GB", "TB"]
 _LIMIT_UNITS = {"b": 1, "k": 1024, "m": 1024**2, "g": 1024**3}
@@ -333,6 +335,7 @@ async def _get_max_connections(
     url: str,
     auth: aiohttp.BasicAuth,
     verify_ssl: bool,
+    proxy_url: str,
     headers: Dict[str, str],
     pool: int,
     connection_test_sec: int,
@@ -344,6 +347,7 @@ async def _get_max_connections(
         url (str): The URL to be requested.
         auth (aiohttp.BasicAuth): The basic auth for SSL connection.
         verify_ssl (bool): Flag if SSL certificate validation should be performed.
+        proxy_url (str): Proxy url in format 'protocol://user:password@ip:port'.
         headers (Dict[str, str]): Custom headers.
         pool (int): The maximum connections amount provided by the user.
         connection_test_sec (int): Maximum time in seconds assigned to test
@@ -353,7 +357,10 @@ async def _get_max_connections(
     Returns:
         int: Number of asynchronous connections achieved.
     """
-    connector = aiohttp.TCPConnector(limit=pool, verify_ssl=verify_ssl)
+    if proxy_url is not None:
+        connector = ProxyConnector.from_url(proxy_url, limit=pool, verify_ssl=verify_ssl)
+    else:
+        connector = aiohttp.TCPConnector(limit=pool, verify_ssl=verify_ssl)
     async with aiohttp.ClientSession(connector=connector, auth=auth, headers=headers) as session:
         tasks = [_test_connection(session, url) for _ in range(pool)]
         done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED, timeout=connection_test_sec)
@@ -366,7 +373,9 @@ async def _get_max_connections(
         return len([status for status in statuses if status > 0 and status < 400])
 
 
-async def _get_resource_bytes(url: str, auth: aiohttp.BasicAuth, verify_ssl: bool, headers: Dict[str, str]) -> int:
+async def _get_resource_bytes(
+    url: str, auth: aiohttp.BasicAuth, verify_ssl: bool, proxy_url: str, headers: Dict[str, str]
+) -> int:
     """Returns resource bytes from Content-Length header if possible.
        If HEAD request is not available for give resource URL, GET will be performed.
 
@@ -374,6 +383,7 @@ async def _get_resource_bytes(url: str, auth: aiohttp.BasicAuth, verify_ssl: boo
         url (str): The resource URL to read size from.
         auth (aiohttp.BasicAuth): The basic auth for SSL connection.
         verify_ssl (bool): Flag if SSL certificate validation should be performed.
+        proxy_url (str): Proxy url in format 'protocol://user:password@ip:port'.
         headers (Dict[str, str]): Custom headers.
 
     Returns:
@@ -382,7 +392,10 @@ async def _get_resource_bytes(url: str, auth: aiohttp.BasicAuth, verify_ssl: boo
     Raises:
         ValueError: If server disconnects.
     """
-    connector = aiohttp.TCPConnector(verify_ssl=verify_ssl)
+    if proxy_url is not None:
+        connector = ProxyConnector.from_url(proxy_url, verify_ssl=verify_ssl)
+    else:
+        connector = aiohttp.TCPConnector(verify_ssl=verify_ssl)
     async with aiohttp.ClientSession(connector=connector, auth=auth, headers=headers) as session:
         try:
             response = await session.head(url)
@@ -417,7 +430,9 @@ def _validate_paths(filepath: str, override: bool, tmp_dir: str) -> None:
         raise ValueError(f"Temporoary directory {tmp_dir} does not exists.")
 
 
-def _validate_settings(max_connections: int, connection_test_sec: int, chunk_bytes: int, max_part_mb: float) -> None:
+def _validate_settings(
+    proxy_url: str, max_connections: int, connection_test_sec: int, chunk_bytes: int, max_part_mb: float
+) -> None:
     """Validates download settings. Raises error if some arguments are invalid.
 
     Args:
@@ -426,6 +441,11 @@ def _validate_settings(max_connections: int, connection_test_sec: int, chunk_byt
     Raises:
         ValueError: If any argument has invalid value.
     """
+    if proxy_url is not None:
+        try:
+            parse_proxy_url(proxy_url)
+        except ValueError as ex:
+            raise ValueError(f"Parameter proxy_url is invalid. Error: {ex}.") from ex
     if max_connections < 1:
         raise ValueError(f"Parameter max_connections has to have positive value. Actual value: {max_connections}.")
     if connection_test_sec < 0:
@@ -555,6 +575,7 @@ async def qget_coro(
     auth: str = None,
     verify_ssl: bool = True,
     mock_browser: bool = True,
+    proxy_url: str = None,
     headers: Dict[str, str] = None,
     progress_ref: ProgressState = None,
     max_connections: int = 50,
@@ -577,6 +598,8 @@ async def qget_coro(
         mock_browser (bool, optional): Flag if User-Agent header should be added to request. Defaults to True.
             Default User-Agent string: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
             (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36'
+        proxy_url (str, optional): HTTP/SOCKS4/SOCKS5 proxy url in format 'protocol://user:password@ip:port'.
+            Defaults to None.
         headers: (Dict[str, str], optional): Custom headers to be sent. Default to None.
             If set user can specify own User-Agent and Accept headers, otherwise defaults will be used.
         progress_ref (ProgressState, optional): Reference to progress state.
@@ -606,7 +629,7 @@ async def qget_coro(
         tmp_dir = tempfile.gettempdir()
 
     _validate_paths(filepath, override, tmp_dir)
-    _validate_settings(max_connections, connection_test_sec, chunk_bytes, max_part_mb)
+    _validate_settings(proxy_url, max_connections, connection_test_sec, chunk_bytes, max_part_mb)
     limit_bps = _parse_limit(limit)
 
     basic_auth = None
@@ -622,7 +645,7 @@ async def qget_coro(
     custom_headers = _build_headers(mock_browser, headers)
 
     logger.debug("Fetching resource size...")
-    resource_bytes = await _get_resource_bytes(url, basic_auth, verify_ssl, custom_headers)
+    resource_bytes = await _get_resource_bytes(url, basic_auth, verify_ssl, proxy_url, custom_headers)
     if resource_bytes == 0:
         raise ValueError("Given URL does not support stream transfer or does not have Content-Length header provided.")
     if progress_ref:
@@ -632,7 +655,7 @@ async def qget_coro(
     if connection_test_sec > 0:
         logger.debug("Measuring maximum asynchronous connections...")
         aio_connections = await _get_max_connections(
-            url, basic_auth, verify_ssl, custom_headers, max_connections, connection_test_sec, logger
+            url, basic_auth, verify_ssl, proxy_url, custom_headers, max_connections, connection_test_sec, logger
         )
         if aio_connections == 0:
             raise ValueError("Cannot send any asynchronous connection to given resource URL.")
@@ -657,7 +680,10 @@ async def qget_coro(
         limiter = Limiter(limit_bps, aio_connections)
         logger.debug("Overrided chunk_bytes for stream iteration to new value=%d due to limiter.", limiter.chunk_bytes)
 
-    connector = aiohttp.TCPConnector(limit=aio_connections, verify_ssl=verify_ssl)
+    if proxy_url is not None:
+        connector = ProxyConnector.from_url(proxy_url, limit=aio_connections, verify_ssl=verify_ssl)
+    else:
+        connector = aiohttp.TCPConnector(limit=aio_connections, verify_ssl=verify_ssl)
     async with aiohttp.ClientSession(connector=connector, auth=basic_auth, headers=custom_headers) as session:
         part_bytes = min(math.ceil(resource_bytes / aio_connections), int(max_part_mb * 1024 * 1024))
         part_count = math.ceil(resource_bytes / part_bytes)
@@ -722,6 +748,8 @@ def qget(url: str, **kwargs) -> None:
         mock_browser (bool, optional): Flag if User-Agent header should be added to request. Defaults to True.
             Default User-Agent string: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
             (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36'
+        proxy_url (str, optional): HTTP/SOCKS4/SOCKS5 proxy url in format 'protocol://user:password@ip:port'.
+            Defaults to None.
         headers: (Dict[str, str], optional): Custom headers to be sent. Default to None.
             If set user can specify own User-Agent and Accept headers, otherwise defaults will be used.
         progress_ref (ProgressState, optional): Reference to progress state.
