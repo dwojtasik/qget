@@ -95,7 +95,7 @@ class FileBuffer:
         self._buffer_size = buffer_size
         self._buffer_bytes = 0
 
-    async def _write_to_handle(self, close: bool = False):
+    async def _write_to_handle(self, close: bool = False) -> None:
         """Writes data from internal buffer to file.
 
         Args:
@@ -108,7 +108,7 @@ class FileBuffer:
         if close:
             self._buffer.close()
 
-    async def write(self, data: bytes):
+    async def write(self, data: bytes) -> None:
         """Writes data to internal buffer.
 
         Data will be written to file if buffer contains more data than self._buffer_size limit.
@@ -122,7 +122,7 @@ class FileBuffer:
         if self._buffer_bytes > self._buffer_size:
             await self._write_to_handle()
 
-    async def close(self):
+    async def close(self) -> None:
         """Closes internal buffer after flushing it's content to file.
 
         Should be always called at the end of file processing."""
