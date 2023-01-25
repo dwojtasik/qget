@@ -67,7 +67,7 @@ mentioned above:
 
 For simple rate limiting (*per connection*) ``qget`` allows to achieve **multiple times faster** download speed
 based on user internet connection speed, number of simultaneous requests and resource server configuration.
-In example above ``qget`` achived over **24x** download speed of ``wget``.
+In example above ``qget`` achieved over **24x** download speed of ``wget``.
 
 For more complicated cases (*e.g. connections limit per IP*) automatic connection limit measurement test was
 created to calculate how many simultaneous requests could be achieved before server rejects next one.
@@ -284,7 +284,7 @@ Part size
 ---------
 Part size is calculated in runtime based on resource size in bytes and maximum amount of asynchronous
 connections set by user (or connection test). Max part size param (``max_part_mb`` or ``--part MAX_PART_MB``)
-supplied by user is use as a top limit for calulated value.
+supplied by user is use as a top limit for calculated value.
 
 .. code-block:: text
 
@@ -292,6 +292,10 @@ supplied by user is use as a top limit for calulated value.
 
 History
 =======
+0.1.5 (2023-01-25)
+------------------
+- Updated copyright note.
+
 0.1.4 (2022-08-25)
 ------------------
 - Added support for SOCKS4(a), SOCKS5(h), HTTP (tunneling) proxy.
@@ -321,4 +325,4 @@ History
 ------------------
 - Initial version.
 
-.. |latest_version| replace:: 0.1.4
+.. |latest_version| replace:: 0.1.5

@@ -31,7 +31,7 @@ def _get_logger() -> logging.Logger:
     return logger
 
 
-def _get_qget_default_agrs() -> Dict[str, Any]:
+def _get_qget_default_args() -> Dict[str, Any]:
     """Gets default arguments for qget_coro(...) method.
 
     Returns:
@@ -47,7 +47,7 @@ def _get_parser() -> argparse.ArgumentParser:
     Returns:
         argparse.ArgumentParser: The argument parser.
     """
-    default_args = _get_qget_default_agrs()
+    default_args = _get_qget_default_args()
     parser = argparse.ArgumentParser(
         prog="qget",
         description="Downloads resource from given URL in buffered parts using "
@@ -163,7 +163,7 @@ def _get_parser() -> argparse.ArgumentParser:
         "-v",
         "--version",
         action="version",
-        version=f"qget v{__version__}",
+        version=f"qget v{__version__} (c) 2022 by Dominik Wojtasik",
         help="Displays actual version of qget.",
     )
     parser.add_argument("url", type=str, help="URL of resource")
@@ -171,7 +171,7 @@ def _get_parser() -> argparse.ArgumentParser:
 
 
 def _main():
-    """Scipt entrypoint"""
+    """Script entrypoint"""
     logger = _get_logger()
     parser = _get_parser()
     progress_bar: tqdm = None

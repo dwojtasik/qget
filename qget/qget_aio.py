@@ -341,7 +341,7 @@ async def _get_max_connections(
     connection_test_sec: int,
     logger: logging.Logger = None,
 ) -> int:
-    """Measures and returnes maximum amount of asynchronous HTTP connections to URL.
+    """Measures and returns maximum amount of asynchronous HTTP connections to URL.
 
     Args:
         url (str): The URL to be requested.
@@ -425,9 +425,9 @@ def _validate_paths(filepath: str, override: bool, tmp_dir: str) -> None:
     if not os.path.isdir(dirpath):
         raise ValueError(f"Directory {dirpath} does not exists.")
     if not override and os.path.isfile(filepath):
-        raise ValueError(f"File {filepath} already exists. Use override flag if it is intended behaviour.")
+        raise ValueError(f"File {filepath} already exists. Use override flag if it is intended behavior.")
     if not os.path.isdir(tmp_dir):
-        raise ValueError(f"Temporoary directory {tmp_dir} does not exists.")
+        raise ValueError(f"Temporary directory {tmp_dir} does not exists.")
 
 
 def _validate_settings(
@@ -461,7 +461,8 @@ def _parse_limit(limit: str) -> int:
 
     Args:
         limit (str, optional): Download rate limit in MBps. Can be supplied with unit as "Nunit", eg. "5M".
-            Valid units (case insensitve): b, k, m, g, kb, mb, gb. 0 bytes will be treat as no limit. Defaults to None.
+            Valid units (case insensitive): b, k, m, g, kb, mb, gb. 0 bytes will be treat as no limit.
+            Defaults to None.
 
     Returns:
         int: Bytes per second value.
@@ -479,7 +480,7 @@ def _parse_limit(limit: str) -> int:
     if unit not in _LIMIT_UNITS:
         raise ValueError(
             (
-                "Parameter limit constains invalid unit. Valid units (case insensitve): b, k, m, g, kb, mb, gb. "
+                "Parameter limit contains invalid unit. Valid units (case insensitive): b, k, m, g, kb, mb, gb. "
                 f"Actual value: {limit}"
             )
         )
@@ -513,7 +514,7 @@ async def _download_part(
         part_data (PartData): Basic informations about part.
         chunk_bytes (int): Chunk of data read in iteration from url and save to part file in bytes.
         limiter (Limiter, optional): Limiter for download rate. If supplied FileBuffer will be used and chunk_bytes
-            for stream iteration will be overriden with new calculated value. Defaults to None.
+            for stream iteration will be overridden with new calculated value. Defaults to None.
         progress_ref (ProgressState, optional): Reference to progress state.
             If passed part bytes will be updated in it. Defaults to None.
     """
@@ -678,7 +679,9 @@ async def qget_coro(
     limiter: Limiter = None
     if limit_bps > 0:
         limiter = Limiter(limit_bps, aio_connections)
-        logger.debug("Overrided chunk_bytes for stream iteration to new value=%d due to limiter.", limiter.chunk_bytes)
+        logger.debug(
+            "Overridden chunk_bytes for stream iteration to new value=%d due to limiter.", limiter.chunk_bytes
+        )
 
     if proxy_url is not None:
         connector = ProxyConnector.from_url(proxy_url, limit=aio_connections, verify_ssl=verify_ssl)
