@@ -30,6 +30,7 @@ Features
 - support for custom headers
 - automatic measurement of simultaneous connections limit
 - support for limiting download rate
+- support for retries during part downloading
 - support for downloading / rewriting progress with callbacks (by default using ``tqdm``)
 - support for limiting RAM usage with settings ``chunk_bytes`` and ``max_part_mb``
 - support for using own event loop in ``asyncio`` by ``qget_coro`` coroutine
@@ -147,6 +148,8 @@ Function arguments:
       Will be used also when rewriting parts to output file. If limit is supplied this can be override for
       stream iteration. Defaults to 2621440.
   max_part_mb (float, optional): Desirable (if possible) max part size in megabytes. Defaults to 5.
+  retries (int, optional): Retries number for part download. Defaults to 10.
+  retry_sec (int, optional): Time to wait between retries of part download in seconds. Defaults to 1.
   limit (str, optional): Download rate limit in MBps. Can be supplied with unit as "Nunit", eg. "5M".
       Valid units (case insensitive): b, k, m, g, kb, mb, gb. 0 bytes will be treat as no limit.
       Defaults to None.
@@ -248,6 +251,8 @@ Command line
     --bytes CHUNK_BYTES   Chunk of data read in iteration from url and save to part file in
                           bytes. Will be used also when rewriting parts to output file.
     --part MAX_PART_MB    Desirable (if possible) max part size in megabytes.
+    --retries RETRIES     Retries number for part download.
+    --retry_sec RETRY_SEC Time to wait between retries of part download in seconds.
     --limit LIMIT         Download rate limit in MBps. Can be supplied with unit as 'Nunit',
                           eg. '5M'. Valid units (case insensitive): b, k, m, g, kb, mb, gb.
                           0 bytes will be treat as no limit.
@@ -292,8 +297,8 @@ supplied by user is use as a top limit for calculated value.
 
 History
 =======
-Unreleased
-----------
+0.1.6 (2023-05-15)
+------------------
 - Fixed multiple logging handlers created with multiple qget calls.
 - Added retries for connection errors during async downloading.
 
@@ -330,4 +335,4 @@ Unreleased
 ------------------
 - Initial version.
 
-.. |latest_version| replace:: 0.1.5
+.. |latest_version| replace:: 0.1.6
