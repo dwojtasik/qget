@@ -219,9 +219,11 @@ Command line
 
 .. code-block:: text
 
-  usage: qget [-h] [-o FILEPATH] [-f] [-a AUTH] [--no-verify] [--no-mock] [-H HEADER]
-              [-c MAX_CONNECTIONS] [--test CONNECTION_TEST_SEC] [--bytes CHUNK_BYTES]
-              [--part MAX_PART_MB] [--limit LIMIT] [--tmp TMP_DIR] [--debug] [-v]
+  usage: qget [-h] [-o FILEPATH] [-f] [-a AUTH] [--no-verify] [--no-mock]
+              [--proxy PROXY_URL] [-H HEADER] [-c MAX_CONNECTIONS]
+              [--test CONNECTION_TEST_SEC] [--bytes CHUNK_BYTES] [--part MAX_PART_MB]
+              [--retries RETRIES] [--retry_sec RETRY_SEC] [--limit LIMIT] [--tmp TMP_DIR]
+              [--debug] [-v]
               url
 
   Downloads resource from given URL in buffered parts using asynchronous HTTP connections
@@ -297,6 +299,10 @@ supplied by user is use as a top limit for calculated value.
 
 History
 =======
+0.1.7 (2023-05-15)
+------------------
+- Added retries and retry_sec parameter validation.
+
 0.1.6 (2023-05-15)
 ------------------
 - Fixed multiple logging handlers created with multiple qget calls.
@@ -335,4 +341,4 @@ History
 ------------------
 - Initial version.
 
-.. |latest_version| replace:: 0.1.6
+.. |latest_version| replace:: 0.1.7

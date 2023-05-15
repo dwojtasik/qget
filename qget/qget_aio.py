@@ -433,7 +433,13 @@ def _validate_paths(filepath: str, override: bool, tmp_dir: str) -> None:
 
 
 def _validate_settings(
-    proxy_url: str, max_connections: int, connection_test_sec: int, chunk_bytes: int, max_part_mb: float
+    proxy_url: str,
+    max_connections: int,
+    connection_test_sec: int,
+    chunk_bytes: int,
+    max_part_mb: float,
+    retries: int,
+    retry_sec: int,
 ) -> None:
     """Validates download settings. Raises error if some arguments are invalid.
 
@@ -456,6 +462,10 @@ def _validate_settings(
         raise ValueError(f"Parameter chunk_bytes has to have positive value. Actual value: {chunk_bytes}.")
     if max_part_mb <= 0:
         raise ValueError(f"Parameter max_part_mb has to have positive value. Actual value: {max_part_mb}.")
+    if retries < 0:
+        raise ValueError(f"Parameter retries cannot be negative. Actual value: {retries}.")
+    if retry_sec <= 0:
+        raise ValueError(f"Parameter retry_sec has to have positive value. Actual value: {retry_sec}.")
 
 
 def _parse_limit(limit: str) -> int:
@@ -672,7 +682,7 @@ async def qget_coro(
         tmp_dir = tempfile.gettempdir()
 
     _validate_paths(filepath, override, tmp_dir)
-    _validate_settings(proxy_url, max_connections, connection_test_sec, chunk_bytes, max_part_mb)
+    _validate_settings(proxy_url, max_connections, connection_test_sec, chunk_bytes, max_part_mb, retries, retry_sec)
     limit_bps = _parse_limit(limit)
 
     basic_auth = None
