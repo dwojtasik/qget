@@ -6,7 +6,7 @@ set VERSION=0.1.7
 
 ::32bit
 set CONDA_FORCE_32BIT=1
-call conda create -n qget32 -y
+call conda create -n qget32 python=3.10.4 -y
 call conda activate qget32
 call conda install pip -y
 pip install -r requirements.txt
@@ -16,7 +16,7 @@ call conda deactivate
 set CONDA_FORCE_32BIT=
 
 ::64bit
-call conda create -n qget64 -y
+call conda create -n qget64 python=3.10.6 -y
 call conda activate qget64
 call conda install pip -y
 pip install -r requirements.txt
