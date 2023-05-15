@@ -292,6 +292,11 @@ supplied by user is use as a top limit for calculated value.
 
 History
 =======
+Unreleased
+----------
+- Fixed multiple logging handlers created with multiple qget calls.
+- Added retries for connection errors during async downloading.
+
 0.1.5 (2023-01-25)
 ------------------
 - Updated copyright note.

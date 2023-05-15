@@ -138,6 +138,20 @@ def _get_parser() -> argparse.ArgumentParser:
         help="Desirable (if possible) max part size in megabytes.",
     )
     parser.add_argument(
+        "--retries",
+        type=int,
+        dest="retries",
+        default=default_args["retries"],
+        help="Retries number for part download.",
+    )
+    parser.add_argument(
+        "--retry_sec",
+        type=int,
+        dest="retry_sec",
+        default=default_args["retry_sec"],
+        help="Time to wait between retries of part download in seconds.",
+    )
+    parser.add_argument(
         "--limit",
         type=str,
         dest="limit",
